@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>14ª Cavalgada Tradicional - Bar Rural</title>
     
-    <!-- Firebase SDKs (Versão compatível para arquivo único) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -61,7 +61,7 @@
             border-radius: 15px;
             padding: 20px;
             width: 100%;
-            max-width: 500px;
+            max-width: 420px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
@@ -125,7 +125,7 @@
 
         canvas {
             width: 100%;
-            max-width: 100%;
+            max-width: 280px; /* Ajustado proporcionalmente na tela para visualização */
             height: auto;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
@@ -186,7 +186,6 @@
             width: 100%;
         }
 
-        /* Responsividade para telas muito pequenas */
         @media(max-width: 360px) {
             header h1 { font-size: 1.4rem; }
             .container { padding: 12px; }
@@ -197,7 +196,7 @@
 
     <header>
         <h1>14ª Cavalgada Tradicional</h1>
-        <p>Monte sua foto em tempo real e compartilhe!</p>
+        <p>Monte sua foto em formato Story e compartilhe!</p>
     </header>
 
     <div class="container">
@@ -208,7 +207,7 @@
             </div>
         </div>
 
-        <div class="loading" id="loadingText">Sincronizando com o Firebase e gerando arte...</div>
+        <div class="loading" id="loadingText">Sincronizando com o Firebase e gerando story...</div>
 
         <div class="preview-container" id="previewContainer">
             <canvas id="canvas"></canvas>
@@ -219,7 +218,7 @@
             </button>
 
             <!-- Botão de Download Tradicional -->
-            <a id="downloadBtn" class="btn-action btn-download" download="cavalgada-bar-rural.png">
+            <a id="downloadBtn" class="btn-action btn-download" download="cavalgada-bar-rural-story.png">
                 📥 Baixar Imagem para o Celular
             </a>
         </div>
@@ -254,10 +253,12 @@
         const shareInstaBtn = document.getElementById('shareInstaBtn');
         const loadingText = document.getElementById('loadingText');
 
-        // Carrega a logomarca oficial em memória antecipadamente
+        // Pré-carrega a logo com crossOrigin para evitar bloqueios no Canvas
         const logoImg = new Image();
         logoImg.crossOrigin = "anonymous";
         logoImg.src = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh4O87Lqqzzm98qPRvWJQjWcaoXheNvZBOJ5aGFBVApK8VemYpZBjT1HbcMh6iq2wfZVc1M44GGZ3D38R4CfNTPNF7U1HP6Xk5kSH1OJ281dCbIMe4TJ__aOj5ALzA5Dw_UKs4FCui1sEhpcbChS62ejkb4vBVJZy4BPvcB9BhlY7t9g1IbFqMtSiiant8/s1600/254093.png';
+
+        let finalDataURL = "";
 
         uploadInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -281,34 +282,34 @@
 
                 const userImg = new Image();
                 userImg.onload = function() {
-                    const targetSize = 1080;
-                    canvas.width = targetSize;
-                    canvas.height = targetSize;
+                    // Resolução exata padrão Story do Instagram (9:16)
+                    const targetWidth = 1080;
+                    const targetHeight = 1920;
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
 
-                    // Centraliza e ajusta a foto do usuário perfeitamente (modo cover)
+                    // Ajusta a foto do usuário preenchendo o fundo verticalmente (modo cover proporcional)
                     let uWidth = userImg.width;
                     let uHeight = userImg.height;
-                    let sWidth, sHeight, sX, sY;
+                    
+                    let sWidth = uWidth;
+                    let sHeight = uWidth * (targetHeight / targetWidth);
+                    let sX = 0;
+                    let sY = (uHeight - sHeight) / 2;
 
-                    const aspect = uWidth / uHeight;
-                    if (aspect > 1) {
+                    if (sHeight > uHeight) {
                         sHeight = uHeight;
-                        sWidth = uHeight;
+                        sWidth = uHeight * (targetWidth / targetHeight);
                         sX = (uWidth - sWidth) / 2;
                         sY = 0;
-                    } else {
-                        sWidth = uWidth;
-                        sHeight = uWidth;
-                        sX = 0;
-                        sY = (uHeight - sHeight) / 2;
                     }
 
-                    ctx.drawImage(userImg, sX, sY, sWidth, sHeight, 0, 0, targetSize, targetSize);
+                    ctx.drawImage(userImg, sX, sY, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
 
                     if (logoImg.complete) {
-                        drawElements(targetSize);
+                        drawElements(targetWidth, targetHeight);
                     } else {
-                        logoImg.onload = () => drawElements(targetSize);
+                        logoImg.onload = () => drawElements(targetWidth, targetHeight);
                     }
                 }
                 userImg.src = base64String;
@@ -316,27 +317,27 @@
             reader.readAsDataURL(file);
         });
 
-        function drawElements(size) {
-            // --- FUNDO DA TARJA INFERIOR ---
-            const barHeight = 320; 
-            const barY = size - barHeight;
+        function drawElements(width, height) {
+            // --- FUNDO DA TARJA INFERIOR PROPORCIONAL AO STORY ---
+            const barHeight = 420; 
+            const barY = height - barHeight;
 
             ctx.save();
-            const bgGrad = ctx.createLinearGradient(0, barY, 0, size);
+            const bgGrad = ctx.createLinearGradient(0, barY, 0, height);
             bgGrad.addColorStop(0, 'rgba(15, 8, 2, 0.92)');
             bgGrad.addColorStop(1, 'rgba(15, 8, 2, 0.99)');
             ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, barY, size, barHeight);
+            ctx.fillRect(0, barY, width, barHeight);
 
             // Linha dourada superior de destaque
             ctx.fillStyle = '#f4d06f';
-            ctx.fillRect(0, barY, size, 6);
+            ctx.fillRect(0, barY, width, 8);
             ctx.restore();
 
-            // --- LOGOMARCA À ESQUERDA ---
-            const logoWidth = 310; 
+            // --- LOGOMARCA À ESQUERDA NA TARJA DO STORY ---
+            const logoWidth = 350; 
             const logoHeight = (logoImg.height / logoImg.width) * logoWidth;
-            const logoX = 35;
+            const logoX = 50;
             const logoY = barY + (barHeight - logoHeight) / 2; 
 
             ctx.save();
@@ -345,9 +346,9 @@
             ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
             ctx.restore();
 
-            // --- TEXTO PREENCHENDO A GRADE À DIREITA ---
+            // --- TEXTO ADAPTADO AO FORMATO VERTICAL DO STORY ---
             ctx.save();
-            ctx.font = '900 44px "Segoe UI", Arial, sans-serif';
+            ctx.font = '900 48px "Segoe UI", Arial, sans-serif';
             ctx.fillStyle = '#FFFFFF';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
@@ -357,52 +358,65 @@
             ctx.shadowOffsetX = 3;
             ctx.shadowOffsetY = 3;
 
-            const textX = logoX + logoWidth + 30; 
+            const textX = logoX + logoWidth + 40; 
             const textLine1 = "EU VOU PARA A";
             const textLine2 = "CAVALGADA DO";
             const textLine3 = "BAR RURAL DOMINGO!";
             
             const centerY = barY + (barHeight / 2);
-            const lineSpacing = 55;
+            const lineSpacing = 60;
 
             ctx.fillText(textLine1, textX, centerY - lineSpacing);
             ctx.fillText(textLine2, textX, centerY);
             
-            // Terceira linha com destaque dourado preenchendo a grade
             ctx.fillStyle = '#f4d06f';
             ctx.fillText(textLine3, textX, centerY + lineSpacing);
 
             ctx.restore();
 
-            // Exibe a pré-visualização e os botões de ação
+            // Salva a imagem gerada em Base64
+            finalDataURL = canvas.toDataURL('image/png');
+            downloadBtn.href = finalDataURL;
+
+            // Exibe a pré-visualização e os botões
             loadingText.style.display = 'none';
             previewContainer.style.display = 'flex';
-
-            const dataURL = canvas.toDataURL('image/png');
-            downloadBtn.href = dataURL;
         }
 
-        // --- BOTÃO DE COMPARTILHAMENTO INTELIGENTE PARA STORIES DO INSTAGRAM ---
-        shareInstaBtn.addEventListener('click', function() {
-            canvas.toBlob(function(blob) {
-                const file = new File([blob], "cavalgada-bar-rural.png", { type: "image/png" });
-                
+        // --- COMPARTILHAMENTO E DOWNLOAD ROBUSTO ---
+        shareInstaBtn.addEventListener('click', async function() {
+            if (!finalDataURL) return;
+
+            try {
+                const response = await fetch(finalDataURL);
+                const blob = await response.blob();
+                const file = new File([blob], "cavalgada-bar-rural-story.png", { type: "image/png" });
+
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({
+                    await navigator.share({
                         files: [file],
                         title: '14ª Cavalgada Tradicional Bar Rural',
                         text: 'Eu vou para a cavalgada do Bar Rural domingo!'
-                    }).catch(() => {});
+                    });
                 } else {
-                    const link = document.createElement('a');
-                    link.href = canvas.toDataURL('image/png');
-                    link.download = 'cavalgada-bar-rural.png';
-                    link.click();
-                    
-                    alert('✨ Foto salva com sucesso no seu celular!\n\nAgora abra o Instagram, crie um Story e selecione essa imagem da sua galeria!');
+                    triggerDownload();
                 }
-            }, 'image/png');
+            } catch (error) {
+                console.log("Erro ao compartilhar via Web Share:", error);
+                triggerDownload();
+            }
         });
+
+        function triggerDownload() {
+            const link = document.createElement('a');
+            link.href = finalDataURL;
+            link.download = 'cavalgada-bar-rural-story.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('✨ Imagem no formato Story salva na sua galeria!\n\nAgora abra o Instagram, crie um Story e selecione a foto!');
+        }
     </script>
 </body>
 </html>
