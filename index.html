@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14ª Cavalgada Tradicional - Bar Rural</title>
+    
+    <!-- Firebase SDKs (Versão compatível para arquivo único) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #8B4513;
+            --secondary-color: #D2B48C;
+            --accent-color: #d9534f;
+            --dark-color: #2c1d0c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2c1d0c 0%, #4a2e12 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            color: #f4d06f;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: auto;
+        }
+
+        .upload-section {
+            width: 100%;
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn-upload {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .btn-upload:hover {
+            background: #c9302c;
+        }
+
+        .btn-upload:active {
+            transform: scale(0.98);
+        }
+
+        .preview-container {
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            background: #000;
+        }
+
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.3s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-instagram {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            color: white;
+        }
+
+        .btn-instagram:hover {
+            opacity: 0.9;
+        }
+
+        .btn-download {
+            background: #5cb85c;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #4cae4c;
+        }
+
+        .loading {
+            display: none;
+            margin: 15px 0;
+            font-style: italic;
+            color: #f4d06f;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            margin-top: 15px;
+            padding: 10px 0;
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Responsividade para telas muito pequenas */
+        @media(max-width: 360px) {
+            header h1 { font-size: 1.4rem; }
+            .container { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>14ª Cavalgada Tradicional</h1>
+        <p>Monte sua foto em tempo real e compartilhe!</p>
+    </header>
+
+    <div class="container">
+        <div class="upload-section" id="uploadSection">
+            <div class="file-input-wrapper">
+                <button class="btn-upload">📷 Escolher ou Mudar Foto</button>
+                <input type="file" id="upload" accept="image/*">
+            </div>
+        </div>
+
+        <div class="loading" id="loadingText">Sincronizando com o Firebase e gerando arte...</div>
+
+        <div class="preview-container" id="previewContainer">
+            <canvas id="canvas"></canvas>
+            
+            <!-- Botão para Stories do Instagram -->
+            <button id="shareInstaBtn" class="btn-action btn-instagram">
+                📸 Postar nos Stories do Instagram
+            </button>
+
+            <!-- Botão de Download Tradicional -->
+            <a id="downloadBtn" class="btn-action btn-download" download="cavalgada-bar-rural.png">
+                📥 Baixar Imagem para o Celular
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 Bar Rural - Todos os direitos reservados.
+    </footer>
+
+    <script>
+        // Configuração do Firebase Realtime Database
+        const firebaseConfig = {
+          apiKey: "AIzaSyCczhst9EVg27JpvBMq9C-Z0n9efQpI5rQ",
+          authDomain: "studio-bella-rosa.firebaseapp.com",
+          databaseURL: "https://studio-bella-rosa-default-rtdb.firebaseio.com",
+          projectId: "studio-bella-rosa",
+          storageBucket: "studio-bella-rosa.firebasestorage.app",
+          messagingSenderId: "235281594938",
+          appId: "1:235281594938:web:bb215b9aaa694e219d5303",
+          measurementId: "G-TCNBC5S04S"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const uploadInput = document.getElementById('upload');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const previewContainer = document.getElementById('previewContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const shareInstaBtn = document.getElementById('shareInstaBtn');
+        const loadingText = document.getElementById('loadingText');
+
+        // Carrega a logomarca oficial em memória antecipadamente
+        const logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.src = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh4O87Lqqzzm98qPRvWJQjWcaoXheNvZBOJ5aGFBVApK8VemYpZBjT1HbcMh6iq2wfZVc1M44GGZ3D38R4CfNTPNF7U1HP6Xk5kSH1OJ281dCbIMe4TJ__aOj5ALzA5Dw_UKs4FCui1sEhpcbChS62ejkb4vBVJZy4BPvcB9BhlY7t9g1IbFqMtSiiant8/s1600/254093.png';
+
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            loadingText.style.display = 'block';
+            previewContainer.style.display = 'none';
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const base64String = event.target.result;
+
+                // --- SALVAMENTO EM TEMPO REAL NO FIREBASE ---
+                const timestamp = Date.now();
+                database.ref('participantes_cavalgada/' + timestamp).set({
+                    imagem: base64String,
+                    criadoEm: new Date().toISOString()
+                }).catch(error => {
+                    console.error("Erro ao sincronizar com o Firebase Realtime Database:", error);
+                });
+
+                const userImg = new Image();
+                userImg.onload = function() {
+                    const targetSize = 1080;
+                    canvas.width = targetSize;
+                    canvas.height = targetSize;
+
+                    // Centraliza e ajusta a foto do usuário perfeitamente (modo cover)
+                    let uWidth = userImg.width;
+                    let uHeight = userImg.height;
+                    let sWidth, sHeight, sX, sY;
+
+                    const aspect = uWidth / uHeight;
+                    if (aspect > 1) {
+                        sHeight = uHeight;
+                        sWidth = uHeight;
+                        sX = (uWidth - sWidth) / 2;
+                        sY = 0;
+                    } else {
+                        sWidth = uWidth;
+                        sHeight = uWidth;
+                        sX = 0;
+                        sY = (uHeight - sHeight) / 2;
+                    }
+
+                    ctx.drawImage(userImg, sX, sY, sWidth, sHeight, 0, 0, targetSize, targetSize);
+
+                    if (logoImg.complete) {
+                        drawElements(targetSize);
+                    } else {
+                        logoImg.onload = () => drawElements(targetSize);
+                    }
+                }
+                userImg.src = base64String;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        function drawElements(size) {
+            // --- FUNDO DA TARJA INFERIOR ---
+            const barHeight = 320; 
+            const barY = size - barHeight;
+
+            ctx.save();
+            const bgGrad = ctx.createLinearGradient(0, barY, 0, size);
+            bgGrad.addColorStop(0, 'rgba(15, 8, 2, 0.92)');
+            bgGrad.addColorStop(1, 'rgba(15, 8, 2, 0.99)');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, barY, size, barHeight);
+
+            // Linha dourada superior de destaque
+            ctx.fillStyle = '#f4d06f';
+            ctx.fillRect(0, barY, size, 6);
+            ctx.restore();
+
+            // --- LOGOMARCA À ESQUERDA ---
+            const logoWidth = 310; 
+            const logoHeight = (logoImg.height / logoImg.width) * logoWidth;
+            const logoX = 35;
+            const logoY = barY + (barHeight - logoHeight) / 2; 
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+            ctx.shadowBlur = 15;
+            ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+            ctx.restore();
+
+            // --- TEXTO PREENCHENDO A GRADE À DIREITA ---
+            ctx.save();
+            ctx.font = '900 44px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+
+            const textX = logoX + logoWidth + 30; 
+            const textLine1 = "EU VOU PARA A";
+            const textLine2 = "CAVALGADA DO";
+            const textLine3 = "BAR RURAL DOMINGO!";
+            
+            const centerY = barY + (barHeight / 2);
+            const lineSpacing = 55;
+
+            ctx.fillText(textLine1, textX, centerY - lineSpacing);
+            ctx.fillText(textLine2, textX, centerY);
+            
+            // Terceira linha com destaque dourado preenchendo a grade
+            ctx.fillStyle = '#f4d06f';
+            ctx.fillText(textLine3, textX, centerY + lineSpacing);
+
+            ctx.restore();
+
+            // Exibe a pré-visualização e os botões de ação
+            loadingText.style.display = 'none';
+            previewContainer.style.display = 'flex';
+
+            const dataURL = canvas.toDataURL('image/png');
+            downloadBtn.href = dataURL;
+        }
+
+        // --- BOTÃO DE COMPARTILHAMENTO INTELIGENTE PARA STORIES DO INSTAGRAM ---
+        shareInstaBtn.addEventListener('click', function() {
+            canvas.toBlob(function(blob) {
+                const file = new File([blob], "cavalgada-bar-rural.png", { type: "image/png" });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: '14ª Cavalgada Tradicional Bar Rural',
+                        text: 'Eu vou para a cavalgada do Bar Rural domingo!'
+                    }).catch(() => {});
+                } else {
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL('image/png');
+                    link.download = 'cavalgada-bar-rural.png';
+                    link.click();
+                    
+                    alert('✨ Foto salva com sucesso no seu celular!\n\nAgora abra o Instagram, crie um Story e selecione essa imagem da sua galeria!');
+                }
+            }, 'image/png');
+        });
+    </script>
+</body>
+</html>
